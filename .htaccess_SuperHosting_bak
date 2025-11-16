@@ -1,0 +1,51 @@
+AddHandler ${application/x-httpd-yogahonc-php83} .php .php5 .phtml .php7 .php8
+RewriteEngine On
+
+# Serve real files/directories first
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# API to backend
+RewriteRule ^backend/api/?$ backend/api/index.php [L,QSA]
+RewriteRule ^backend/api/(.*)$ backend/api/index.php [L,QSA]
+RewriteRule ^api/?$ backend/api/index.php [L,QSA]
+RewriteRule ^api/(.*)$ backend/api/index.php [L,QSA]
+
+# SPA fallback
+RewriteRule . /index.html [L]
+
+# MIME
+AddType application/javascript .js .mjs
+AddType text/css .css
+AddType application/wasm .wasm
+AddType image/svg+xml .svg
+AddType image/webp .webp
+AddType font/woff2 .woff2
+AddType font/woff .woff
+AddType application/json .json
+
+# Security
+<FilesMatch "\.(env|git|htaccess|htpasswd)">
+  Require all denied
+</FilesMatch>
+<Files "composer.*">
+  Require all denied
+</Files>
+<Files "package*.json">
+  Require all denied
+</Files>
+
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+  </FilesMatch>
+  <FilesMatch "\.(js|mjs|css|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot)$">
+    Header set Cache-Control "public, max-age=2592000"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>

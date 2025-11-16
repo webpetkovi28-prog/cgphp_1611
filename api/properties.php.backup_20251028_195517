@@ -1,0 +1,263 @@
+<?php
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
+try {
+    // Database connection
+    $host = 'localhost';
+    $dbname = 'yogahonc_consultingg788';
+    $username = 'yogahonc_consultingg788';
+    $password = 'PoloSport88*';
+    
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    
+    // Get search parameters
+    $keyword = $_GET['keyword'] ?? '';
+    $transaction_type = $_GET['transaction_type'] ?? '';
+    $property_type = $_GET['property_type'] ?? '';
+    $city_region = $_GET['city_region'] ?? '';
+    $district = $_GET['district'] ?? '';
+    $min_price = isset($_GET['min_price']) ? (float)$_GET['min_price'] : 0;
+    $max_price = isset($_GET['max_price']) ? (float)$_GET['max_price'] : 999999999;
+    $featured = isset($_GET['featured']) ? (int)$_GET['featured'] : null;
+    $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+    $limit = isset($_GET['limit']) ? min(100, max(1, (int)$_GET['limit'])) : 16;
+    $offset = ($page - 1) * $limit;
+    
+    // Build main query
+    $sql = "SELECT p.* FROM properties p WHERE p.active = 1";
+    $params = [];
+    
+    // TEXT SEARCH - search in multiple fields with Cyrillic support
+    if (!empty($keyword)) {
+        $sql .= " AND (
+            LOWER(p.title) LIKE LOWER(:keyword1) OR
+            LOWER(p.description) LIKE LOWER(:keyword2) OR
+            LOWER(p.city_region) LIKE LOWER(:keyword3) OR
+            LOWER(p.district) LIKE LOWER(:keyword4) OR
+            LOWER(p.address) LIKE LOWER(:keyword5) OR
+            LOWER(p.property_code) LIKE LOWER(:keyword6)
+        )";
+        $searchTerm = "%{$keyword}%";
+        $params[':keyword1'] = $searchTerm;
+        $params[':keyword2'] = $searchTerm;
+        $params[':keyword3'] = $searchTerm;
+        $params[':keyword4'] = $searchTerm;
+        $params[':keyword5'] = $searchTerm;
+        $params[':keyword6'] = $searchTerm;
+    }
+    
+    // Transaction type filter
+    if (!empty($transaction_type) && $transaction_type !== 'all') {
+        $sql .= " AND p.transaction_type = :transaction_type";
+        $params[':transaction_type'] = $transaction_type;
+    }
+    
+    // Property type filter
+    if (!empty($property_type) && $property_type !== 'all') {
+        $sql .= " AND p.property_type = :property_type";
+        $params[':property_type'] = $property_type;
+    }
+    
+    // City/Region filter
+    if (!empty($city_region) && $city_region !== 'all') {
+        $sql .= " AND LOWER(p.city_region) LIKE LOWER(:city_region)";
+        $params[':city_region'] = "%{$city_region}%";
+    }
+    
+    // District filter
+    if (!empty($district) && $district !== 'all') {
+        $sql .= " AND LOWER(p.district) LIKE LOWER(:district)";
+        $params[':district'] = "%{$district}%";
+    }
+    
+    // Price range filters
+    if ($min_price > 0) {
+        $sql .= " AND p.price >= :min_price";
+        $params[':min_price'] = $min_price;
+    }
+    if ($max_price < 999999999) {
+        $sql .= " AND p.price <= :max_price";
+        $params[':max_price'] = $max_price;
+    }
+    
+    // Featured filter
+    if ($featured !== null) {
+        $sql .= " AND p.featured = :featured";
+        $params[':featured'] = $featured;
+    }
+    
+    // Get total count for pagination
+    $countSql = "SELECT COUNT(*) as total FROM (" . $sql . ") as count_query";
+    $countStmt = $pdo->prepare($countSql);
+    $countStmt->execute($params);
+    $totalCount = (int)$countStmt->fetch()['total'];
+    
+    // Add ordering and pagination
+    $sql .= " ORDER BY p.sort_order ASC, p.featured DESC, p.created_at DESC";
+    $sql .= " LIMIT :limit OFFSET :offset";
+    
+    // Execute main query
+    $stmt = $pdo->prepare($sql);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    
+    $properties = $stmt->fetchAll();
+    
+    // Base URL for images
+    $baseUrl = 'https://consultingg.com';
+    
+    // Format properties with images
+    $formattedProperties = [];
+    
+    foreach ($properties as $property) {
+        $propId = $property['id'];
+        
+        // Get images from property_images table
+        $imgStmt = $pdo->prepare("
+            SELECT image_url, thumbnail_url, is_main, sort_order, alt_text
+            FROM property_images 
+            WHERE property_id = :prop_id 
+            ORDER BY is_main DESC, sort_order ASC
+        ");
+        $imgStmt->execute([':prop_id' => $propId]);
+        $dbImages = $imgStmt->fetchAll();
+        
+        // Process images
+        $mainImage = null;
+        $gallery = [];
+        
+        if (!empty($dbImages)) {
+            // Use images from database
+            foreach ($dbImages as $img) {
+                $imageUrl = $img['image_url'];
+                
+                // Add base URL if not already present
+                if (!preg_match('/^https?:\/\//', $imageUrl)) {
+                    $imageUrl = ltrim($imageUrl, '/');
+                    $fullUrl = $baseUrl . '/' . $imageUrl;
+                } else {
+                    $fullUrl = $imageUrl;
+                }
+                
+                if ($img['is_main'] && !$mainImage) {
+                    $mainImage = $fullUrl;
+                }
+                $gallery[] = $fullUrl;
+            }
+        }
+        
+        // Fallback: scan uploads folder if no images in database
+        if (empty($gallery)) {
+            $uploadsDir = __DIR__ . '/../uploads/properties/' . $propId;
+            if (is_dir($uploadsDir)) {
+                $files = glob($uploadsDir . '/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', GLOB_BRACE);
+                if (!empty($files)) {
+                    foreach ($files as $file) {
+                        $filename = basename($file);
+                        $gallery[] = $baseUrl . '/uploads/properties/' . $propId . '/' . $filename;
+                    }
+                    $mainImage = $gallery[0];
+                }
+            }
+        }
+        
+        // Set main image
+        if (!$mainImage && !empty($gallery)) {
+            $mainImage = $gallery[0];
+        }
+        
+        // Placeholder if still no images
+        if (!$mainImage) {
+            $mainImage = $baseUrl . '/images/placeholder-property.jpg';
+            $gallery = [$mainImage];
+        }
+        
+        // Build formatted property object
+        $formattedProperties[] = [
+            'id' => $property['id'],
+            'property_code' => $property['property_code'],
+            'title' => $property['title'],
+            'description' => $property['description'],
+            'price' => (float)$property['price'],
+            'currency' => $property['currency'] ?? 'EUR',
+            'transaction_type' => $property['transaction_type'],
+            'property_type' => $property['property_type'],
+            'city_region' => $property['city_region'],
+            'district' => $property['district'],
+            'address' => $property['address'],
+            'area' => (float)$property['area'],
+            'bedrooms' => (int)$property['bedrooms'],
+            'bathrooms' => (int)$property['bathrooms'],
+            'floors' => (int)$property['floors'],
+            'floor_number' => $property['floor_number'] ? (int)$property['floor_number'] : null,
+            'terraces' => $property['terraces'] ? (int)$property['terraces'] : null,
+            'construction_type' => $property['construction_type'],
+            'condition_type' => $property['condition_type'],
+            'heating' => $property['heating'],
+            'exposure' => $property['exposure'],
+            'year_built' => $property['year_built'] ? (int)$property['year_built'] : null,
+            'furnishing_level' => $property['furnishing_level'],
+            'has_elevator' => (bool)$property['has_elevator'],
+            'has_garage' => (bool)$property['has_garage'],
+            'has_southern_exposure' => (bool)$property['has_southern_exposure'],
+            'new_construction' => (bool)$property['new_construction'],
+            'featured' => (bool)$property['featured'],
+            'active' => (bool)$property['active'],
+            'sort_order' => (int)$property['sort_order'],
+            'created_at' => $property['created_at'],
+            'updated_at' => $property['updated_at'],
+            // Image fields for frontend compatibility
+            'imageUrl' => $mainImage,
+            'thumbnail' => $mainImage,
+            'images' => $gallery,
+            'gallery' => $gallery,
+            'main_image' => $mainImage
+        ];
+    }
+    
+    // Success response
+    echo json_encode([
+        'success' => true,
+        'data' => $formattedProperties,
+        'total' => $totalCount,
+        'page' => $page,
+        'limit' => $limit,
+        'totalPages' => ceil($totalCount / $limit),
+        'hasMore' => ($page * $limit) < $totalCount
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+    
+} catch (PDOException $e) {
+    http_response_code(500);
+    error_log('Database error in properties.php: ' . $e->getMessage());
+    echo json_encode([
+        'success' => false,
+        'error' => 'Database error',
+        'message' => 'Failed to fetch properties',
+        'debug' => $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE);
+    
+} catch (Exception $e) {
+    http_response_code(500);
+    error_log('Server error in properties.php: ' . $e->getMessage());
+    echo json_encode([
+        'success' => false,
+        'error' => 'Server error',
+        'message' => 'An unexpected error occurred',
+        'debug' => $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE);
+}
+?>

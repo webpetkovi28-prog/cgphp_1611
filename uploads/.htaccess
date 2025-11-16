@@ -1,0 +1,49 @@
+# ConsultingG Real Estate - Static File Serving for SuperHosting
+# Serve uploaded images and documents with proper MIME types
+
+# Enable RewriteEngine
+RewriteEngine On
+
+# Security: Deny execution of PHP files in uploads directory
+<Files *.php>
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# Set proper MIME types for images
+<IfModule mod_mime.c>
+    AddType image/jpeg .jpg .jpeg
+    AddType image/png .png
+    AddType image/webp .webp
+    AddType image/gif .gif
+    AddType application/pdf .pdf
+</IfModule>
+
+# Enable compression for images (optional)
+<IfModule mod_deflate.c>
+    SetOutputFilter DEFLATE
+    SetEnvIfNoCase Request_URI \
+        \.(?:gif|jpe?g|png|webp)$ no-gzip dont-vary
+    SetEnvIfNoCase Request_URI \
+        \.(?:exe|t?gz|zip|bz2|sit|rar)$ no-gzip dont-vary
+</IfModule>
+
+# Set cache headers for static assets (1 week)
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpeg "access plus 1 week"
+    ExpiresByType image/png "access plus 1 week"
+    ExpiresByType image/webp "access plus 1 week"
+    ExpiresByType image/gif "access plus 1 week"
+    ExpiresByType application/pdf "access plus 1 month"
+</IfModule>
+
+# Handle missing files gracefully (404 instead of directory listing)
+Options -Indexes
+
+# Allow CORS for images from consultingg.com domain
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "https://consultingg.com"
+    Header set Access-Control-Allow-Methods "GET, OPTIONS"
+    Header set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept"
+</IfModule>

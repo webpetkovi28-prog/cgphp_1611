@@ -1,0 +1,3 @@
+# Keep this directory structure
+# This file ensures the uploads/properties directory is created
+# Remove this file after deployment if needed

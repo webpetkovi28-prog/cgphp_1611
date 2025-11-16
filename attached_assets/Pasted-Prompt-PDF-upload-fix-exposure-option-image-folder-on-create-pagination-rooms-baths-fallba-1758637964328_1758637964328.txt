@@ -1,0 +1,53 @@
+Prompt — PDF upload fix + exposure option + image-folder on create + pagination + rooms/baths fallback (do not break existing logic)
+
+Act as a senior full-stack engineer. Implement the items below without regressing current features (CRUD, JWT, images, PDFs, transactions, optimistic locking, strict JSON).
+
+A) PDF upload (prop-009 test)
+
+Diagnose and fix the PDF upload error. Verify strict MIME application/pdf, size ≤10MB, correct storage under /uploads/properties/{propertyId}/, and secure serving headers.
+
+Use prop-009/office_rent.pdf to confirm end-to-end: upload → list in documents[] → open/download → delete cleans DB+FS.
+
+B) Exposure / Orientation field
+
+Add “Exposure” option with “Не е посочено” when not provided.
+
+Frontend: show this label if value is empty/NULL; do not force a DB default.
+
+API: continue to return NULL when unset (presentation-only fallback in UI).
+
+C) New property: move images into the new property folder
+
+When creating a property, ensure any uploaded images for that session are stored under the newly assigned folder: /uploads/properties/{property_code}/.
+
+Folder naming: keep existing prop-### scheme (e.g., prop-001, …, prop-101). Generate the next available code atomically; create the folder; move files; link records; rollback on failure.
+
+D) Admin pagination
+
+Add pagination to the admin property list: 10 items per page, with prev/next arrows.
+
+Backend: support GET /api/properties?page=<n>&limit=10 and return {items, page, limit, total, totalPages}.
+
+Frontend: wire arrows, disable when at first/last page, preserve filters/sort across pages.
+
+E) Rooms & Bathrooms fallback
+
+Display fallback only: if rooms/bathrooms are not set (NULL), show 0 in the UI.
+
+Keep DB values as NULL when truly unknown (do not force 0 in storage). Ensure API remains consistent; UI applies ?? 0 safely.
+
+Verification — run these checkpoints and report results
+
+PDF: Upload prop-009/office_rent.pdf → appears in documents[], opens with Content-Type: application/pdf, delete removes DB+FS.
+
+Exposure: Detail page shows “Не е посочено” when empty; shows selected value when set.
+
+Create w/ images: Create a new property → images are in /uploads/properties/<new prop-###>/; DB links correct; no orphans.
+
+Pagination: List shows 10 per page; arrows work; meta {page, totalPages} correct across ≥3 pages.
+
+Rooms/Baths: When unset, UI shows 0; when set, shows actual numbers; API stays strict JSON with NULL for unset.
+
+Regression guard: Images & thumbnails still render; all mutations require admin JWT; optimistic locking works; no HTML leakage; proper status codes (201/200/4xx).
+
+Deliverables: minimal idempotent migrations (if needed), code changes with brief change log (files touched, why), and a concise verification report per checkpoint.

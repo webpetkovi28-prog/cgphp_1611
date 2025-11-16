@@ -1,0 +1,97 @@
+Goal: Migrate the project from PostgreSQL to MySQL (SuperHosting) and make the site work end-to-end with the new DB.
+
+Target MySQL credentials (SuperHosting):
+
+Host: localhost
+
+Database: yogahonc_consultingg78
+
+Username: yogahonc_consultingg78
+
+Password: PoloSport88*
+
+Charset/collation: utf8mb4 / utf8mb4_unicode_ci
+
+Tasks:
+
+Create MySQL dumps & backups of current data
+
+Export current Postgres data from the app into portable CSV/SQL (properties, property_images, users, pages, sections, services). Keep the exports in /exports/ so I can download them.
+
+Convert schema to MySQL
+
+Generate a MySQL-compatible schema from the current Postgres schema.
+
+Mappings: SERIAL → INT AUTO_INCREMENT, BOOLEAN → TINYINT(1), TIMESTAMP WITH TIME ZONE → DATETIME, TEXT/VARCHAR unchanged (use utf8mb4), NOW() → CURRENT_TIMESTAMP.
+
+Replace double-quoted identifiers with backticks; remove Postgres-only features (e.g., RETURNING, USING, extensions).
+
+Ensure FKs, indexes, and ON DELETE/UPDATE rules are preserved.
+
+Load data into MySQL
+
+Create the consultingg database (or use the existing one) and import the converted schema.
+
+Load the exported data into the MySQL tables (preserving IDs and relationships).
+
+Update the backend to use MySQL (PDO)
+
+In backend/config/database.php: switch to a MySQL DSN (mysql:host=localhost;dbname=consultingg;charset=utf8mb4) and use PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4" if needed.
+
+Replace any Postgres-specific SQL in backend/models/** and controllers:
+
+Remove RETURNING id; use $pdo->lastInsertId() instead.
+
+Replace ILIKE with LIKE and add COLLATE utf8mb4_unicode_ci if case-insensitive is required.
+
+Ensure LIMIT/OFFSET syntax stays LIMIT :limit OFFSET :offset (works in MySQL).
+
+Use TINYINT(1) for booleans; cast to bool in PHP where returned.
+
+Keep prepared statements and parameter binding as is.
+
+Environment configuration for production
+
+Create/update backend/.env with:
+
+DB_CONNECTION=mysql
+DB_HOST=localhost
+DB_PORT=3306
+DB_DATABASE=yogahonc_consultingg78
+DB_USERNAME=yogahonc_consultingg78
+DB_PASSWORD=PoloSport88*
+DB_CHARSET=utf8mb4
+DB_COLLATION=utf8mb4_unicode_ci
+APP_ENV=production
+APP_DEBUG=false
+
+
+Ensure the app reads these vars and does not rely on DATABASE_URL anymore.
+
+Smoke tests (must pass)
+
+Add a temporary backend/db_mysql_check.php that connects using the env above and returns JSON {ok:true, db:'consultingg'}.
+
+Verify /api/ health, /api/properties, property detail, admin login, and image upload paths.
+
+Confirm thumbnail generation still works and file permissions in uploads/ are OK.
+
+Output & handoff
+
+Provide:
+
+The MySQL schema file you applied, the import logs, and any changed PHP files.
+
+A short README with exactly what was changed and where (files/queries touched).
+
+A compact list of Postgres→MySQL query changes made.
+
+Notes/constraints:
+
+Do not remove any business logic; only adapt SQL/DSN.
+
+Keep JWT/auth, CORS, and uploads behavior unchanged.
+
+Assume SuperHosting has pdo_mysql enabled.
+
+When done, confirm everything works locally in Replit against a MySQL instance, then I will upload the code and .env to SuperHosting (host=localhost).

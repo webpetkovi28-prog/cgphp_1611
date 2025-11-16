@@ -1,0 +1,55 @@
+Exposure option + PDF rendering + Services save + Remove “Sections” + New-property folder (no regressions)
+
+Act as a senior full-stack engineer. Implement the items below without regressing current features (CRUD, JWT auth, images/PDFs, transactions, optimistic locking, strict JSON). Use minimal, idempotent changes.
+
+A) Exposure (Изложение)
+
+Add an extra dropdown option: “Не е посочено”.
+
+Mapping: when this option is chosen, store NULL in DB (no forced default).
+
+Frontend detail page: show the label “Не е посочено” only when value is NULL; otherwise show the selected orientation.
+
+B) PDF: upload, storage, and frontend rendering
+
+Fix the admin PDF upload so files are saved to /uploads/properties/{property_code}/.
+
+API: include PDFs in documents: [{id, url, filename, size}].
+
+Frontend detail page: render a PDF icon at bottom-right only if documents.length > 0; clicking the icon opens in a new tab (browser viewer) with proper headers (Content-Type: application/pdf, safe Content-Disposition).
+
+Keep strict MIME validation (PDF only) and size limit; admin-only.
+
+C) Services text boxes (Услуги) — save after edit
+
+Ensure edits to service cards persist: fix form binding, payload keys, and API route; return 200 with updated entity.
+
+Show success/error toasts; no silent failures.
+
+D) Admin menu — remove “Секции”
+
+If the “Sections” module is unused, remove the menu item and related routes/components only if this does not break navigation or links. Otherwise hide it behind a feature flag. Keep routing intact.
+
+E) New property → create media folder
+
+On property creation, create /uploads/properties/{property_code}/ and store any initial images/PDFs there.
+
+Folder name uses the canonical property code (e.g., prop-011).
+
+Operations must be atomic (rollback DB+FS on failure).
+
+Diagnostics & Tests — run these checkpoints and report
+
+Exposure: set a value → shown correctly; choose “Не е посочено” → DB NULL, detail page shows the label; no defaults applied.
+
+PDF: upload a test PDF → appears in documents[]; icon shows bottom-right; click opens in a new tab; delete removes DB+FS and hides icon.
+
+Services: edit text, save → 200 response; reload → changes persist.
+
+Menu: “Секции” removed (or hidden via flag) with no broken links or console errors.
+
+New property folder: create a property → folder /uploads/properties/<prop-###>/ is created; initial media stored there; no orphan files/rows.
+
+Regression guard: images still render; admin JWT required; optimistic locking works; API responses remain strict JSON with proper status codes.
+
+Deliverables: brief change log (files touched, why) and a short verification report per checkpoint.

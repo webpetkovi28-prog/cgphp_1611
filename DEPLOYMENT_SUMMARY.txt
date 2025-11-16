@@ -1,0 +1,115 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║         DEPLOYMENT ГОТОВ ЗА https://consultingg.com                          ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+📦 ПОДГОТОВКА (на Replit):
+─────────────────────────────────────────────────────────────────────────────────
+1. Build frontend:
+   npm run build
+
+2. Създаден deployment package с:
+   ✅ dist/ (frontend build)
+   ✅ backend/ (PHP API)
+   ✅ uploads/ (снимки на имотите)
+   ✅ .htaccess (SPA routing)
+   ✅ exports/full_mysql_dump.sql (база данни)
+
+─────────────────────────────────────────────────────────────────────────────────
+🚀 UPLOAD НА SUPERHOSTING:
+─────────────────────────────────────────────────────────────────────────────────
+Път: /home/yogahonc/consultingg.com/
+
+Структура:
+/home/yogahonc/consultingg.com/
+├── index.html              ← от dist/
+├── assets/                 ← от dist/assets/
+├── backend/
+│   ├── api/
+│   ├── .htaccess          ← ВАЖНО: CORS за consultingg.com ✅
+│   └── .env               ← Създайте от .env.example.consultingg
+├── uploads/properties/     ← Всички снимки
+└── .htaccess              ← SPA routing
+
+─────────────────────────────────────────────────────────────────────────────────
+⚙️  КОНФИГУРАЦИЯ:
+─────────────────────────────────────────────────────────────────────────────────
+
+1. Създайте backend/.env от backend/.env.example.consultingg:
+
+   DB_CONNECTION=mysql
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_DATABASE=yogahonc_consultingg78
+   DB_USERNAME=yogahonc_consultingg78
+   DB_PASSWORD=PoloSport88*
+   
+   APP_URL=https://consultingg.com
+   PUBLIC_BASE_URL=https://consultingg.com
+   
+   JWT_SECRET=consultingg-jwt-secret-key-2024
+   JWT_AUD=consultingg.com
+
+2. Импортирайте базата:
+   phpMyAdmin → yogahonc_consultingg78 → Import → full_mysql_dump.sql
+
+3. Permissions:
+   chmod 755 uploads/
+   chmod 755 uploads/properties/
+   chmod 644 uploads/properties/*/*.jpg
+
+─────────────────────────────────────────────────────────────────────────────────
+✅ ПРОВЕРКА:
+─────────────────────────────────────────────────────────────────────────────────
+
+1. Homepage:
+   https://consultingg.com/
+   → Трябва да зареди главната страница
+
+2. API:
+   https://consultingg.com/api/properties
+   → Трябва да върне JSON с имоти
+
+3. Снимки:
+   https://consultingg.com/uploads/properties/prop-004/някаква_снимка.jpg
+   → Трябва да покаже снимката
+
+4. Browser Console (F12):
+   → NO CORS errors ✅
+   → Снимките се зареждат ✅
+   → API requests работят ✅
+
+─────────────────────────────────────────────────────────────────────────────────
+📋 ВАЖНИ ФАЙЛОВЕ:
+─────────────────────────────────────────────────────────────────────────────────
+
+✅ backend/.env.example.consultingg    → Template за .env
+✅ backend/.htaccess.consultingg       → CORS конфигурация
+✅ DEPLOY_CONSULTINGG.md               → Пълни инструкции
+✅ QUICK_DEPLOY.sh                     → Script за подготовка
+✅ exports/full_mysql_dump.sql         → MySQL база данни
+
+─────────────────────────────────────────────────────────────────────────────────
+🎯 КЛЮЧОВИ ПРОМЕНИ ЗА consultingg.com:
+─────────────────────────────────────────────────────────────────────────────────
+
+1. CORS Header в backend/.htaccess:
+   ✅ Access-Control-Allow-Origin: https://consultingg.com
+
+2. PUBLIC_BASE_URL в backend/.env:
+   ✅ PUBLIC_BASE_URL=https://consultingg.com
+   
+   → Това гарантира че снимките ще имат правилни пълни URLs!
+
+3. ImageHelper.php вече генерира:
+   ✅ https://consultingg.com/uploads/properties/prop-004/image.jpg
+
+─────────────────────────────────────────────────────────────────────────────────
+📖 ПЪЛНА ДОКУМЕНТАЦИЯ:
+─────────────────────────────────────────────────────────────────────────────────
+
+→ DEPLOY_CONSULTINGG.md
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║  След upload и конфигурация, отворете https://consultingg.com/              ║
+║  Снимките ще се зареждат автоматично! 🎉                                     ║
+╚═══════════════════════════════════════════════════════════════════════════════╝

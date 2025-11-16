@@ -1,0 +1,115 @@
+Prepare this project for deployment on SuperHosting.bg under the domain consultingg.com. Keep the database on Supabase (do NOT use a local DB).
+
+Goals
+
+Diagnose why I get a blank page in production-like mode and fix all server-side issues.
+
+Make the backend production-ready for Apache/PHP on SuperHosting (with a /backend/ API folder).
+
+Ensure the frontend (if present) builds to static files suitable for Apache hosting.
+
+Keep DB connection pointing to Supabase (PostgreSQL over SSL).
+
+Environment & Secrets to use (set or confirm):
+
+DB_HOST = db.<my-project>.supabase.co
+
+DB_PORT = 5432
+
+DB_DATABASE = postgres
+
+DB_USERNAME = postgres
+
+DB_PASSWORD = <MY_SUPABASE_DB_PASSWORD>
+
+SUPABASE_URL = https://gtvcakkgqlpfdivpejmi.supabase.co
+
+SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0dmNha2tncWxwZmRpdnBlam1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3MzI5MDAsImV4cCI6MjA3NDMwODkwMH0.YCRquF6NjAl0wAl5I3uNUyxKh0yKyHirjBKKRW3E4Fk
+
+Do the following steps (ask me if something is unclear):
+
+A) Diagnostics
+
+Run a full dependency check for the backend (Composer) and frontend (if any).
+
+Verify PHP entrypoint(s) and routing: the API must be served from /backend/api/index.php.
+
+Add temporary verbose error logging for PHP (to a log file) and run a health check so we can see actual errors, then turn display off again.
+
+Confirm the project reads environment variables correctly in production (no reliance on dev-only loaders).
+
+Verify that all DB calls use the Supabase Postgres connection over SSL.
+
+B) Backend hardening for Apache on SuperHosting
+
+Create/adjust /backend/.htaccess to:
+
+enable RewriteEngine with RewriteBase /backend/
+
+forward all /backend/api/* routes to /backend/api/index.php
+
+allow CORS for https://consultingg.com (and https://www.consultingg.com if needed)
+
+handle OPTIONS preflight with 204 and proper CORS headers
+
+pass Authorization header to PHP (so Bearer tokens work)
+
+block sensitive files (.env, .sql, .md, .json, composer.lock)
+
+disable directory listing
+
+Ensure DB DSN uses sslmode=require and that PDO throws exceptions.
+
+Confirm the code gracefully reads secrets from environment and does not break without .env in production.
+
+Add a lightweight /backend/api/health endpoint that checks DB connectivity and returns JSON (200 on success).
+
+C) Composer / Build
+
+Run composer install --no-dev --optimize-autoloader for the backend.
+
+If there is a frontend (Vite/React), wire it to Supabase via VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY and produce a production build (e.g., dist/).
+
+D) Supabase integration
+
+Confirm all DB operations point to the Supabase host/port/user/db and not to any local service.
+
+Ensure JWT-based operations (if any) use the anon key on the client and never expose the service role key.
+
+E) Packaging for SuperHosting
+
+Prepare a clean deploy package/structure for Apache with:
+
+frontend static files at the web root (if applicable)
+
+/backend/ folder for the API with the configured .htaccess
+
+vendor/ included (after composer install)
+
+no dev-only files in the package
+
+Output a short DEPLOY.md with exact upload paths and post-deploy checks for SuperHosting (including required PHP extensions pdo_pgsql and pgsql, and minimum PHP version).
+
+F) Verification
+
+Provide curl commands to test CORS (OPTIONS + GET) and a sample authenticated request to /backend/api/....
+
+Run a final local test and show me the result/logs.
+
+Constraints
+
+Do NOT switch to a local DB. Keep Supabase only.
+
+If something is missing (e.g., exact PHP entrypoint), ask me and pause.
+
+Keep code/changes minimal and production-safe.
+
+Success criteria
+
+Health endpoint returns 200 and confirms DB OK.
+
+No blank page; errors are logged, not displayed.
+
+API routes work via /backend/api/... with CORS and Authorization headers.
+
+Project is ready to upload to SuperHosting under consultingg.com and will connect to Supabase in production.

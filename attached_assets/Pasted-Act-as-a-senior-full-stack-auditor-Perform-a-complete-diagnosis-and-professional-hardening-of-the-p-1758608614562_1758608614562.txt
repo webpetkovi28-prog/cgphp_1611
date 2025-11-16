@@ -1,0 +1,79 @@
+Act as a senior full-stack auditor. Perform a complete diagnosis and professional hardening of the property create/edit flows (React/Vite admin → PHP API → PostgreSQL). Ensure data is correctly written, consistent, and aligned with best practices.
+
+Scope
+
+Admin UI forms for create/edit property.
+
+API endpoints (create, update, read, list, delete).
+
+DB schema & constraints for properties and related tables (images, features, locations, relations).
+
+Tasks
+
+End-to-end data correctness
+
+Trace a full cycle: create property → edit → add/remove images → read back via API → verify DB rows changed exactly as intended.
+
+Confirm required fields, types, and formats; reject invalid payloads with 4xx + clear JSON errors.
+
+Ensure no silent truncation/implicit casts; dates, numbers, booleans and enums are persisted correctly.
+
+API contract & responses
+
+Standardize JSON for properties: { id, title, slug, type, location, price, area, description, features[], images[], createdAt, updatedAt }.
+
+Return proper HTTP codes (201 create, 200 update, 400/401/403/404, 409 on unique conflicts).
+
+Include server-side validation messages; no stray output; Content-Type: application/json; charset=utf-8.
+
+DB schema & integrity
+
+Verify constraints: PKs, FKs, NOT NULL, lengths, unique (slug, code), and indexes for common queries.
+
+Enforce referential integrity for property_images.property_id and any junction tables.
+
+Wrap create/update + image linking in transactions; rollback on failure.
+
+Add/update migrations if schema mismatches code. Keep idempotent.
+
+Concurrency & consistency
+
+Implement optimistic locking (updatedAt check) or safe upserts to prevent overwriting concurrent edits.
+
+Ensure edits preserve existing relations (images/features) and cleanly remove unlinked rows (no orphans).
+
+Security & standards
+
+Server-side validation, escaping, and parameterized queries (no SQL injection).
+
+Sanitize rich text; prevent XSS in echoed fields.
+
+AuthZ: only admin can create/update/delete; verify JWT check paths.
+
+Admin UI binding
+
+Confirm the form sends the canonical property id on update and correct field names.
+
+Show inline validation errors from API; optimistic UI update after success; cache-bust where needed so changes appear immediately.
+
+Verification plan (must pass)
+
+Create a test property → API returns 201 with full payload; DB has 1 row with expected values.
+
+Edit key fields (price, title, location) → API 200; DB row updated; UI reflects changes.
+
+Add two images, remove one → DB + filesystem consistent; UI shows final set.
+
+Read property via API → payload matches DB; pagination/list endpoints include the updated record.
+
+Run integrity check: no orphan images/rows; all FKs valid.
+
+Deliverables
+
+Short audit report: issues found, root cause, and exact fixes.
+
+Any new/updated migrations; backups if schema changed.
+
+A concise “How it works” note for create/edit flows and required env vars.
+
+No secrets committed; use Replit Secrets only.

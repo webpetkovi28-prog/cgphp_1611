@@ -1,0 +1,44 @@
+# Bolt ignore file for backend
+# Files and directories to ignore during deployment
+
+# Supabase files (not used in production)
+supabase/
+*.supabase
+
+# Development files
+.env.example
+.env.local
+.env.development
+*.log
+*.tmp
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Test files
+tests/
+phpunit.xml
+*.test.php
+
+# Documentation
+README.md
+*.md
+supabase/*
+docs/
+
+# Git files
+.git/
+.gitignore
+.gitattributes

@@ -1,0 +1,92 @@
+Got it. Here’s a final, comprehensive, and concise prompt you can paste into Replit Agent 3. It fixes year_built, adds the PDF upload, and then runs a full diagnosis with clear checkpoints—without breaking existing logic.
+
+Prompt — Finalize year_built + Add PDF Upload + Full Diagnosis (do not break existing logic)
+
+Act as a senior full-stack engineer. Implement the following changes without regressing current features (images, auth, CRUD, optimistic locking, JSON API). Use minimal, idempotent migrations and keep endpoints stable unless noted.
+
+A) year_built — correct, optional numeric behavior
+
+Keep year_built as integer; validation range 1800–2040.
+
+If field is empty in admin form → store NULL and do not render on the frontend (no default like 2023/current year).
+
+If value is valid (e.g., 1995, 2025) → display normally.
+
+If out of range → return a 4xx JSON with a clear field error.
+
+Ensure DB column allows NULL, with no default.
+
+Frontend admin form: no prefilled default; when cleared, do not submit bogus values; payload omits field or sends null.
+
+API responses: return year_built: null or omit; frontend must conditionally hide it.
+
+B) PDF upload per property (admin form + backend)
+
+Add a PDF upload control under image upload in the admin property form.
+
+Backend: accept PDF only (application/pdf), size limit ≤ 10MB, admin-only (JWT).
+
+Store PDFs in the same property folder as images: /uploads/properties/{propertyId}/.
+
+API: expose documents in property payloads:
+documents: [{ id, url, filename, size }]
+
+Serve PDFs with proper headers (Content-Type: application/pdf, safe Content-Disposition).
+
+Frontend: show a PDF icon (bottom-right) only if at least one PDF exists; clicking opens/downloads. Support multiple PDFs (list or small grid).
+
+Security: validate MIME strictly server-side; never execute PDFs; keep atomic DB+FS operations with rollback on failure.
+
+C) Keep existing standards
+
+Maintain strict JSON responses (+ headers), CORS, JWT auth, atomic transactions, optimistic locking on updates, and image flows.
+
+Do not introduce breaking field renames; align UI→API field names where needed (mapping, not breaking).
+
+Deliverables
+
+Minimal idempotent migration(s) (only if year_built needs NULL/no default, and for property_documents if not already created).
+
+Updated backend validation and admin form handling for year_built + PDFs.
+
+Updated property API to include documents[].
+
+Short change log (what changed, files touched, and why).
+
+Run a Full Diagnosis — Checkpoints (must pass)
+
+1) Year Built
+
+Create property with year_built=2024 → GET returns 2024; UI shows it.
+
+Edit same property, clear year_built → DB stores NULL; UI hides the year everywhere.
+
+Submit invalid values (1799, 2041, non-numeric) → 4xx JSON with clear field error; no silent defaults.
+
+2) PDF Flow
+
+Upload 1–2 PDFs to an existing property → files saved under /uploads/properties/{id}/; API returns documents[] with {id,url,filename,size}.
+
+Open a PDF direct link in browser → HTTP 200, Content-Type: application/pdf.
+
+Frontend shows PDF icon bottom-right only when PDFs exist; clicking opens/downloads.
+
+Delete a PDF → DB row and file removed; UI updates immediately.
+
+3) Regression Guard
+
+Image upload/delete still works; thumbnails render; direct image URL returns 200/image MIME.
+
+Property create/edit still requires admin JWT; optimistic locking still returns 409 on stale updates.
+
+All API responses are strict JSON; no HTML leakage; correct status codes (201/200/4xx).
+
+4) Data Integrity
+
+No default/fallback year shows up when empty (no “2023” or current year).
+
+documents[] present (empty array if none).
+
+No orphan files/rows introduced during PDF or image operations.
+
+Provide a short verification report: what was fixed, test evidence for each checkpoint, and any migrations applied.

@@ -1,0 +1,81 @@
+Fix two issues without changing business logic (keep existing DB schema, API shape, and UI styles).
+
+Tech: Frontend = React, Backend = PHP.
+
+1) “Recommended” star (yellow star) is not working
+
+Goal: Clicking the star toggles the property’s “recommended” status. Yellow = recommended, gray = not.
+
+Frontend:
+
+Wire the star icon to call the existing backend endpoint (or add a minimal one if missing) to toggle recommended for a given property id.
+
+Optimistic UI: update icon state immediately; revert on error.
+
+Keep current icons, tooltips, and styles.
+
+Backend (PHP):
+
+Provide a small endpoint (e.g., PATCH /api/properties/{id}/recommended or equivalent in existing routes) that flips the boolean and returns the new state.
+
+Reuse existing auth/middleware and validation; no schema changes.
+
+Acceptance:
+
+Clicking the star flips state and persists on refresh.
+
+No regressions to list, filters, or details pages.
+
+2) Property folder naming + uploaded filenames
+
+Current issue: On create, property folder uses a UUID like 7c29671b-ac56-….
+
+Required behavior:
+
+Create the storage folder using the next sequential code following existing convention: prop-001, prop-002, … (preserve zero-padding to match current max width, e.g., prop-012, prop-0012 if that is already used—detect from existing entries and keep consistent).
+
+Keep using the current primary key/UUID internally if needed (do not break existing logic), but the filesystem folder name for new properties must be the new sequential code.
+
+Uploaded images must keep their original filenames exactly as uploaded. Only sanitize unsafe characters minimally (e.g., strip path separators, control chars). Do not hash/rename otherwise.
+
+Implementation notes:
+
+Determine next code by scanning existing property codes/folders and computing max + 1. Store the assigned code where the app already stores/display codes (or alongside the property record if a field exists). Do not change database structure unless a field already exists for the code.
+
+For existing properties with UUID-named folders: do not migrate/rename; only apply the new rule to newly created properties.
+
+Acceptance:
+
+Creating a new property produces a folder like prop-XYZ with correct zero-padding according to existing convention.
+
+Uploaded files inside that folder retain their original names.
+
+Existing properties keep working; no broken links.
+
+General constraints
+
+Do not change business rules, models, or visual design.
+
+Use project root files (not _deploy).
+
+Keep current DB connection/settings untouched.
+
+Deliverables
+
+List of files changed (frontend & backend).
+
+Brief notes on:
+
+Which endpoint handles the star toggle and what payload/response it uses.
+
+How the next prop-XXX code is computed and where it’s stored.
+
+How original filenames are preserved and what sanitization is applied.
+
+Verification checklist
+
+Star toggles and persists after reload.
+
+New property → folder named prop-### (correct padding), images saved with original names.
+
+No regressions in uploads, listing, filters, or details.

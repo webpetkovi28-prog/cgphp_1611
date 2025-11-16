@@ -1,0 +1,45 @@
+Options -Indexes
+AddDefaultCharset UTF-8
+
+<IfModule mod_headers.c>
+    # Забрана за кеширане
+    Header set Cache-Control "no-store, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+
+    # Security хедъри
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+<IfModule LiteSpeed>
+    CacheDisable public /
+    RewriteEngine On
+    RewriteRule .* - [E=cache-control:no-cache]
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # API → backend/api/index.php
+    RewriteCond %{REQUEST_URI} ^/api/ [NC]
+    RewriteRule ^api/(.*)$ backend/api/index.php [L,QSA]
+
+    # Забрана на чувствителни файлове
+    RewriteRule ^(.*/)?\.env$ - [F,L]
+    RewriteRule ^(.*/)?composer\.(json|lock)$ - [F,L]
+    RewriteRule ^(.*/)?package(-lock)?\.json$ - [F,L]
+    RewriteRule ^(.*/)?yarn\.lock$ - [F,L]
+    RewriteRule ^(.*/)?phpunit\.xml$ - [F,L]
+    RewriteRule ^(.*/)?\.git(/|ignore)? - [F,L]
+    RewriteRule ^(.*/)?[^/]+\.(sql|bak|log|ini|sh)$ - [F,L]
+
+    # React SPA routing
+    RewriteCond %{REQUEST_URI} !^/api/ [NC]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule . /index.html [L]
+</IfModule>

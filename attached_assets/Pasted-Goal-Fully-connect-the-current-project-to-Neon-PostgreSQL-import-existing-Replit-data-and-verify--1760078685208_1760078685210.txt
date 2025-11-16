@@ -1,0 +1,118 @@
+Goal:
+Fully connect the current project to Neon PostgreSQL, import existing Replit data, and verify API + Neon connection using the direct (non-pooler) host.
+
+🚀 PROMPT START
+
+You are in charge of completing the Neon migration.
+Perform the following exact steps sequentially:
+
+1️⃣ Environment Setup
+
+Create environment variables for the Neon database (Direct Host):
+
+export FORCE_DISCRETE_DB_CONFIG=true
+export DB_HOST="ep-noisy-pine-agnly9s.c-2.eu-central-1.aws.neon.tech"
+export DB_PORT=5432
+export DB_DATABASE="neondb"
+export DB_USERNAME="neondb_owner"
+export DB_PASSWORD="npg_gCx4XYj6QvtB"
+export DB_SSLMODE=require
+
+
+Then persist them to Replit Secrets and .env if supported:
+
+FORCE_DISCRETE_DB_CONFIG=true
+DB_HOST=ep-noisy-pine-agnly9s.c-2.eu-central-1.aws.neon.tech
+DB_PORT=5432
+DB_DATABASE=neondb
+DB_USERNAME=neondb_owner
+DB_PASSWORD=npg_gCx4XYj6QvtB
+DB_SSLMODE=require
+
+2️⃣ Verify Neon Connectivity (Quick CLI Test)
+
+Run:
+
+PGPASSWORD=$DB_PASSWORD psql "postgresql://$DB_USERNAME:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_DATABASE?sslmode=require" -c "\conninfo"
+
+
+✅ If you see something like:
+
+You are connected to database "neondb" as user "neondb_owner"
+
+
+the connection works perfectly.
+
+3️⃣ Import Replit Database → Neon
+
+Import the previously exported dumps from /exports:
+
+set -e
+echo "Starting Neon import..."
+pg_restore --no-owner --no-privileges -v -d "postgresql://$DB_USERNAME:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_DATABASE?sslmode=require" exports/replit_db.dump || {
+  echo "Binary restore failed, trying plain SQL..."
+  psql "postgresql://$DB_USERNAME:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_DATABASE?sslmode=require" -f exports/replit_db.sql
+}
+echo "✅ Neon import completed successfully!"
+
+4️⃣ Test the Connection in PHP Layer
+
+Use the included connection check script:
+
+curl -s https://$REPL_SLUG.$REPL_OWNER.repl.co/backend/db_neon_check.php
+
+
+Expected output:
+
+{"ok": true, "dsn": "pgsql:host=ep-noisy-pine-agnly9s.c-2.eu-central-1.aws.neon.tech;port=5432;dbname=neondb;sslmode=require"}
+
+
+If you see ok: false → log the error field for debugging.
+
+5️⃣ Validate API Endpoints
+
+Run:
+
+curl -s https://$REPL_SLUG.$REPL_OWNER.repl.co/api/
+curl -s https://$REPL_SLUG.$REPL_OWNER.repl.co/api/properties
+
+
+✅ Expect JSON data from /api/properties (real property list).
+
+6️⃣ Confirm Health and Log Summary
+
+After successful test, echo final summary:
+
+echo "✅ Neon PostgreSQL migration completed successfully!"
+echo "Connected via: ep-noisy-pine-agnly9s.c-2.eu-central-1.aws.neon.tech"
+echo "Project now running entirely on Neon."
+
+⚙️ Notes
+
+No pooler host required → SNI is fully supported on Replit.
+
+SSL required → already included.
+
+If you ever migrate to SuperHosting, use the same .env but add:
+
+DB_OPTIONS=options=endpoint=ep-noisy-pine-agnly9s;channel_binding=disable
+
+
+(only if it shows “Endpoint ID is not specified”).
+
+Existing config/database.php already has SNI + endpoint injection logic → no further code edits needed.
+
+✅ Deliverables
+
+After this script finishes:
+
+/exports/replit_db.dump imported into Neon
+
+backend/db_neon_check.php returns ok: true
+
+/api/properties and /api/ return valid JSON
+
+Replit Secrets updated to point to Neon
+
+Run everything now in Replit’s Console.
+When done, paste the output from db_neon_check.php or /api/ here, за да потвърдим, че връзката с Neon е напълно активна.

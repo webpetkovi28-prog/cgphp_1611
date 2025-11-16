@@ -1,0 +1,49 @@
+{
+  "name": "consultingg/real-estate",
+  "description": "ConsultingG Real Estate - Modern property management platform",
+  "type": "project",
+  "keywords": ["real-estate", "properties", "php", "api"],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "ConsultingG Team",
+      "email": "admin@consultingg.bg"
+    }
+  ],
+  "require": {
+    "php": ">=8.0",
+    "ext-pdo": "*",
+    "ext-json": "*",
+    "ext-mbstring": "*",
+    "ext-fileinfo": "*",
+    "firebase/php-jwt": "^6.8"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "ConsultingG\\": "backend/",
+      "App\\": "backend/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "ConsultingG\\Tests\\": "tests/",
+      "Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit",
+    "install-db": "php backend/database/install.php"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true,
+    "allow-plugins": {
+      "composer/package-versions-deprecated": true
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}

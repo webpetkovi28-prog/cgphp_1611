@@ -1,0 +1,22 @@
+{
+  "name": "consultingg/backend",
+  "description": "ConsultingG Real Estate Backend API",
+  "type": "library",
+  "require": {
+    "php": ">=8.0",
+    "ext-pdo": "*",
+    "ext-json": "*",
+    "ext-mbstring": "*",
+    "ext-fileinfo": "*",
+    "firebase/php-jwt": "^6.8",
+    "vlucas/phpdotenv": "^5.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "ConsultingG\\Backend\\": "."
+    }
+  },
+  "config": {
+    "optimize-autoloader": true
+  }
+}

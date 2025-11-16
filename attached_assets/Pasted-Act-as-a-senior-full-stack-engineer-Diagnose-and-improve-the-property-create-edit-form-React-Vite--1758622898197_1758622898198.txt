@@ -1,0 +1,58 @@
+Act as a senior full-stack engineer. Diagnose and improve the property create/edit form (React/Vite admin → PHP API → PostgreSQL) with the following goals, without regressing existing features.
+
+A) Optional “Property Details” fields (no forced values)
+
+Admin UI: make all fields in “Property Details” optional. If a field is empty, do not send it (omit from payload) and do not display it in the frontend detail page.
+
+Backend: treat omitted/empty fields as NULL (no silent defaults like 0). Return only present fields in JSON responses.
+
+DB: ensure columns for these details allow NULL (no failing NOT NULL). Add idempotent migration if needed.
+
+B) PDF upload per property (single or multiple)
+
+Admin UI: add a PDF upload control under the image upload in the property form. When a PDF is uploaded, it belongs to the current property and is stored in the same folder as images (/uploads/properties/{propertyId}/).
+
+Backend: accept PDFs (application/pdf) with a safe max size; store file + metadata; return clean JSON with documents[] = [{id, url, filename, size}].
+
+Serving & UI: in the frontend detail page, render a PDF icon button at the bottom-right (as in the screenshot). Show it only when at least one PDF exists; clicking downloads/opens the PDF. Support multiple PDFs (grid/list if >1).
+
+Security: validate MIME, size, and auth (admin only). Never execute PDFs; always serve with Content-Type: application/pdf and safe Content-Disposition.
+
+C) Form correctness audit (best practices)
+
+Validate server-side types/ranges for numeric fields; use enums for selects; reject malformed input with 4xx + field errors.
+
+Keep transactions for create/update + attachments; rollback on partial failures.
+
+Ensure API contract for property detail:
+
+{ id, …, images: [{id, url, thumbnail_url, alt_text, sort_order}],
+  documents: [{id, url, filename, size}],
+  createdAt, updatedAt }
+
+
+Frontend: bind to this contract; conditionally render sections (hide empty fields/blocks).
+
+Accessibility/i18n: labels, aria, localized messages; no console errors.
+
+Do not change existing routes unless necessary; if a new endpoint is added, document it.
+
+Verification (must pass)
+
+Create property with several empty detail fields → API 201; DB stores NULLs; frontend hides the empty items.
+
+Edit property and clear a previously set field → API 200; DB becomes NULL; frontend hides it.
+
+Upload one or more PDFs → files saved under /uploads/properties/{id}/; API returns documents[]; PDF icon appears bottom-right; clicking opens/downloads.
+
+Images remain fully functional (no regression); gallery shows as before.
+
+All responses are strict JSON with correct headers; no HTML leakage; auth required for mutations.
+
+Deliverables
+
+Minimal, idempotent migration(s) (if columns need to allow NULL).
+
+Updated admin UI bindings and backend handling for optional fields + PDFs.
+
+Short report: changes made, endpoints/fields affected, and a 5-step manual test guide.

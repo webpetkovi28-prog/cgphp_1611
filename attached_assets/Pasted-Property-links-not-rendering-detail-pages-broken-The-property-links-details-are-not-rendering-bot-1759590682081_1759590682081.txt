@@ -1,0 +1,65 @@
+Property links not rendering / detail pages broken
+
+The property links/details are not rendering both on Replit and on our SuperHosting deploy.
+
+Symptoms
+
+Clicking a property card often navigates to /properties/undefined.
+
+Network console shows 500s for GET /backend/api/properties/undefined and sometimes for GET /backend/api/properties?page=1&limit=16&featured=true.
+
+Images under /uploads/... work, but the detail pages don’t.
+
+Please do the following end-to-end:
+
+Frontend fixes (links + API base)
+
+Inspect the component that renders the property cards/list and builds the detail link.
+
+Build links with a safe key: const key = item.property_code || item.id;
+Do not render/navigate if key is falsy.
+
+Ensure the router has a detail route like /properties/:idOrCode and the loader/component calls the API with that param only if present.
+
+Make the API base configurable and default to production-friendly:
+VITE_API_BASE=/api (for prod). Use it in the client:
+
+const API = import.meta.env.VITE_API_BASE || '/api';
+
+
+Rebuild the frontend (npm run build) after changes.
+
+Backend hardening (no 500 on bad params)
+
+In backend/routes/properties.php, add a guard so that /properties/undefined (or empty/null) returns 400 Bad Request (JSON), not 500.
+
+$idOrSlug = trim((string)$pathParts[0]);
+if ($idOrSlug === '' || $idOrSlug === 'undefined' || $idOrSlug === 'null') {
+  http_response_code(400);
+  echo json_encode(['success'=>false,'error'=>'Missing or invalid property identifier']);
+  exit;
+}
+
+
+In PropertyController::getById, keep the same validation and return 404 if not found, never 500.
+
+In the model (e.g., Property::findOne), do a safe lookup without forcing UUID parsing:
+use p.id::text = :ident OR p.property_code = :ident (remove slug if it doesn’t exist).
+
+.env / API routing already set
+
+Keep VITE_API_BASE=/api (root .htaccess routes /api/* to backend/api/index.php).
+
+Backend .env and Dotenv are already in place; no changes needed there.
+
+Verification (please run and paste results)
+
+GET /backend/api/health → should be 200 JSON.
+
+GET /backend/api/properties?limit=3 → 200 JSON array.
+
+GET /backend/api/properties/prop-001 → 200 JSON (or 404 if not found), not 500.
+
+In the browser, property cards should link to /properties/<property_code_or_id> (no undefined), and the detail page should render.
+
+If any 500 remains, enable temporary debug (APP_DEBUG=true) and include the exact error message from the JSON or backend/php-error.log so we can finalize.

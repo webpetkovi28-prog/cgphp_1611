@@ -1,0 +1,106 @@
+Goal: Prepare a production-ready SuperHosting package and fix any config issues so images/PDFs render on the live site. Do not rewrite business logic.
+
+Tasks
+
+Use SuperHosting DB (final)
+
+Ensure the backend reads environment config (no hardcoded fallbacks).
+
+Use these production settings (without printing secrets in logs):
+
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://consultingg.com
+
+DB_DRIVER=pgsql
+DB_HOST=localhost
+DB_PORT=5432
+DB_DATABASE=yogahonc_consultingg8
+DB_USERNAME=yogahonc_consultingg88
+DB_PASSWORD=PoloSport88*
+
+
+Remove any references to old DB names (e.g., yogahonc_consultingg55). Confirm /backend/api/health reports db_connected:true.
+
+Frontend build & structure for public_html/
+
+Vite build with base: '/'.
+
+Output structure at root (no dist/ folder at runtime):
+
+public_html/
+  index.html
+  assets/...
+  backend/api/...
+  uploads/ (writable)
+  .htaccess
+
+
+Ensure all asset URLs resolve (no 404s for /assets/*.js).
+
+Routing (.htaccess)
+
+Add SPA + API rewrites:
+
+/backend/api/* → backend/api/index.php
+
+serve existing static files directly
+
+all other routes → /index.html
+
+Do not block /uploads/*.
+
+Images / PDFs visibility
+
+Property APIs must return absolute URLs using APP_URL, e.g.
+https://consultingg.com/uploads/properties/<prop-###>/<file>
+
+Confirm direct GET to one image and one PDF returns 200 with correct MIME.
+
+Permissions & PHP
+
+Document PHP 8.2 extensions: pdo_pgsql, pgsql, fileinfo, mbstring, intl, gd|imagick, exif, curl, zip, openssl, opcache.
+
+Ensure uploads/ is writable (755/775).
+
+Disable display_errors in production and log to /tmp/consultingg-errors.log.
+
+Produce deploy.zip + README_DEPLOY.md
+
+Create deploy.zip with only production files (index.html, assets, backend/api, vendor, uploads (structure only), .htaccess).
+
+Exclude node_modules, logs, caches, tests.
+
+Include backend/api/.env sample (no secrets) or .env.production.example with placeholders.
+
+Provide README_DEPLOY.md with exact steps:
+
+Upload & extract to public_html/
+
+Set env (APP_URL, DB creds, JWT_SECRET)
+
+PHP 8.2 + required extensions
+
+Set uploads/ permissions
+
+Verify health & images
+
+Verification (must pass)
+
+/backend/api/health → ok:true, db_connected:true.
+
+/backend/api/properties?page=1&limit=5 returns data with valid images[] and documents[] URLs.
+
+Open one image URL & one PDF URL → 200 OK, correct MIME.
+
+Homepage loads without console errors; no 404s for /assets/*.js.
+
+Deliverables
+
+Path to deploy.zip
+
+README_DEPLOY.md with step-by-step SuperHosting instructions
+
+Short change log (files touched, why)
+
+Brief verification report (with 2 working sample URLs: one image, one PDF)

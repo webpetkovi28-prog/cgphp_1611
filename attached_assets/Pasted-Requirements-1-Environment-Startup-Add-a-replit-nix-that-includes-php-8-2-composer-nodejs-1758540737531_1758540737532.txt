@@ -1,0 +1,145 @@
+Requirements
+1. Environment & Startup
+
+Add a replit.nix that includes:
+
+php (8.2+), composer
+
+nodejs (18+), npm
+
+postgresql client tools (psql, pg_dump)
+
+Add .replit at repo root with:
+
+run = "bash run.sh"
+
+
+Create run.sh:
+
+cd project/backend && composer install (if vendor/ missing).
+
+Start PHP API:
+
+php -S 0.0.0.0:8080 -t project/backend/api > backend.log 2>&1 &
+
+
+Start Vite frontend on port 5000 inside project/:
+
+cd project && npm install && npm run dev
+
+
+Ensure preview points to Vite dev server (port 5000).
+
+2. PostgreSQL (Replit-managed)
+
+Provision a Replit Production Database (PostgreSQL) for this project.
+
+Store DATABASE_URL in Replit Secrets (also PGHOST, PGUSER, etc. if needed).
+
+Update backend DB config to parse DATABASE_URL and connect via PDO.
+
+If project/supabase/migrations/ exists, apply SQL migrations to Replit Postgres.
+
+3. Frontend (Vite/React)
+
+In vite.config.ts, configure:
+
+server: {
+  host: true,
+  port: 5000,
+  strictPort: true,
+  allowedHosts: [
+    '*.replit.dev',
+    'localhost',
+    '127.0.0.1',
+    // include the current Replit preview hostname dynamically
+  ],
+  proxy: { '/api': 'http://localhost:8080' },
+},
+base: '/',
+
+
+Ensure API_BASE in project/src/services/api.ts uses:
+import.meta.env.VITE_API_BASE || '/api'
+→ In dev, proxy handles /api/*; in production, backend can be /backend/api.
+
+4. PHP Backend (API + Composer)
+
+Run composer install in project/backend to install firebase/php-jwt and other deps.
+
+Ensure CORS (project/backend/config/cors.php) allows:
+
+Replit preview origin in dev,
+
+production domain in deployment.
+
+Guarantee all API responses return proper application/json.
+
+5. Image Upload & Delete (Admin panel)
+
+Frontend (api.ts):
+
+Add uploadPropertyImages(propertyId, files[]) → POST /api/images/upload with FormData.
+
+Add deletePropertyImage(imageId) → DELETE /api/images/{id}.
+
+Backend (ImageController.php):
+
+Implement upload() to handle multiple files:
+
+Require property_id.
+
+Save images into project/uploads/properties/{property_id}/.
+
+Return JSON with uploaded file paths.
+
+Implement delete($id) to:
+
+Validate JWT/auth.
+
+Delete image record and file from disk.
+
+Return JSON {success:true}.
+
+Ensure project/uploads/properties/ is writable.
+
+6. Health Check & Validation
+
+Add GET /api/health returning { ok:true, db:"connected" }.
+
+Test endpoints:
+
+/api/properties returns valid JSON consumed by frontend.
+
+/api/images/upload and /api/images/{id} work correctly.
+
+No MIME errors in browser (JS/CSS served properly).
+
+7. Database Export Script
+
+Create scripts/export_db.sh:
+
+#!/bin/bash
+mkdir -p exports
+pg_dump "$DATABASE_URL" > exports/db_$(date +%Y%m%d).sql
+pg_dump -Fc "$DATABASE_URL" -f exports/db_$(date +%Y%m%d).dump
+echo "Exported to exports/"
+
+
+Document how to later import these dumps into SuperHosting PostgreSQL.
+
+Deliverables
+
+Working .replit, replit.nix, run.sh.
+
+Updated vite.config.ts and api.ts.
+
+Composer-installed backend with JWT and DB access.
+
+Upload/delete images working in admin panel.
+
+Database running in Replit, migrations applied, export_db.sh ready.
+
+README section with dev usage, build instructions, and deployment notes.
+
+Do not commit secrets — always use Replit Secrets for DB credentials and JWT key.

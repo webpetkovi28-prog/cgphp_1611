@@ -1,0 +1,74 @@
+Here’s a single, professional diagnose-and-fix prompt you can paste into Replit Agent 3. It asks the agent to self-audit the project, repair issues, and ensure the site renders in the preview, including image upload/delete and DB setup. No code included.
+
+Objective:
+Perform a full self-diagnosis and repair pass so that this monorepo runs cleanly in Replit. The frontend must render in the Replit preview, the PHP API must respond, image upload/delete from the admin panel must work end-to-end, and a Replit-managed PostgreSQL database must be connected and migrated. Produce a concise report of detected issues and applied fixes.
+
+Context:
+
+Frontend is under project/ (Vite + React + TypeScript).
+
+Backend is under project/backend/ (PHP, REST API, JWT).
+
+API entry is project/backend/api/index.php.
+
+Migrations (if any) are in project/supabase/migrations/.
+
+Image uploads are stored under project/uploads/properties/.
+
+Replit preview must show the running site at the frontend URL.
+
+Do not commit secrets; use Replit Secrets for all credentials.
+
+Tasks:
+
+Environment and startup
+• Detect missing or misconfigured startup files. If needed, create or adjust configuration so the frontend runs in development and the PHP API runs concurrently.
+• Ensure the frontend uses a stable port for the Replit preview and the backend uses a different internal port.
+• Confirm the project starts from a single command with both services running reliably.
+
+Database (Replit-managed PostgreSQL)
+• Provision or connect to a Replit Production Database.
+• Store environment variables in Replit Secrets and configure the backend to read them.
+• Parse a single database URL to initialize the connection in the backend.
+• Detect and apply migrations in the correct order. Seed if applicable.
+• Add a simple health endpoint that confirms DB connectivity.
+
+Frontend ↔ Backend integration
+• Diagnose any preview failures, blocked host errors, proxy issues, or MIME/type problems.
+• Configure the dev server so the Replit preview host is allowed and the frontend can proxy API requests to the backend port.
+• Ensure the frontend uses an environment-based API base path that works in development and can be switched for production later.
+• Eliminate any “expected module script but got text/html” problems by fixing routing, base paths, and dev/proxy behavior.
+
+Image upload/delete (admin panel)
+• Verify the backend routes for uploading and deleting images exist and are protected by admin auth.
+• Ensure the upload directory exists, is writable, and that file validations and responses are robust.
+• Verify the frontend admin flows call the correct endpoints for upload and delete, handle responses, and update UI state accordingly.
+• Confirm that listing of images per property works and reflects changes immediately after upload or delete.
+
+CORS, headers, and reliability
+• Ensure all API responses return valid JSON with proper headers.
+• Enable CORS for current Replit preview origin in development and keep production-ready settings documented.
+• Remove stray output that could corrupt JSON.
+• Add clear error messages when folders are not writable or required environment variables are missing.
+
+Database export for later migration
+• Provide a simple documented procedure in the repository to export the current database in both plain SQL and custom formats for later import to SuperHosting.
+• Document at a high level how to import these exports into a standard PostgreSQL host.
+
+Acceptance criteria:
+• The Replit preview loads the frontend without host or MIME errors.
+• The backend health endpoint returns a JSON object confirming DB connectivity.
+• The admin panel can upload and delete images per property, and the changes are visible immediately.
+• All required environment variables are defined in Replit Secrets; no secrets are committed.
+• A short summary file is added at the repo root describing: how to run locally in Replit, how to manage env vars, how to export the DB, and where the image files are stored.
+
+Deliverables:
+• A brief diagnostic report listing issues found and exact fixes applied.
+• Updated project configuration so a single run action starts both frontend and backend and the preview works.
+• Working image upload/delete functionality verified end-to-end.
+• A short README-style section with: run instructions in Replit, environment variable names, DB export steps, and notes for future production deployment.
+
+Constraints:
+• Do not hardcode secrets or environment settings into versioned files.
+• Do not introduce breaking changes to the existing API contract without noting them in the report.
+• Keep changes minimal, targeted, and documented.

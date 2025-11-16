@@ -1,0 +1,199 @@
+🔧 PROMPT (Replit)
+
+Goal: Migrate DB from Replit Postgres to Neon, switch app to Neon, patch DSN for Neon SNI, and verify API works both on Replit and ready for SuperHosting.
+
+Known Neon details (fill if different):
+
+NEON HOST (direct, pooling OFF): ep-noisy-pine-agnly9s.eu-central-1.aws.neon.tech ✅
+
+NEON HOST (pooler, if needed): ep-noisy-pine-agnly9s-pooler.c-2.eu-central-1.aws.neon.tech
+
+NEON DB: neondb
+
+NEON USER: neondb_owner
+
+NEON PASS: npg_gCx4XYj6QvtB (потвърди паролата)
+
+NEON ENDPOINT ID: ep-noisy-pine-agnly9s
+
+Tasks
+
+Create DB exports from Replit Postgres
+
+Detect Replit DATABASE_URL or PG* envs.
+
+Create exports/ and dump both binary and plain SQL:
+
+mkdir -p exports
+if [ -n "$DATABASE_URL" ]; then
+  pg_dump --no-owner --no-privileges -Fc -f exports/replit_db.dump "$DATABASE_URL"
+  pg_dump --no-owner --no-privileges -f  exports/replit_db.sql  "$DATABASE_URL"
+else
+  pg_dump --no-owner --no-privileges -Fc -f exports/replit_db.dump
+  pg_dump --no-owner --no-privileges -f  exports/replit_db.sql
+fi
+ls -lh exports
+
+
+Prepare Neon connection strings
+
+Build two URLs:
+
+Direct (preferred):
+
+export NEON_URL_DIRECT="postgresql://neondb_owner:npg_gCx4XYj6QvtB@ep-noisy-pine-agnly9s.eu-central-1.aws.neon.tech/neondb?sslmode=require"
+
+
+Pooler (fallback for some clients):
+
+export NEON_URL_POOLER="postgresql://neondb_owner:npg_gCx4XYj6QvtB@ep-noisy-pine-agnly9s-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+
+
+Import into Neon (prefer DIRECT first)
+
+Try binary restore; if fails, try plain SQL:
+
+set -e
+echo "Import to Neon (DIRECT) ..."
+pg_restore --no-owner --no-privileges -d "$NEON_URL_DIRECT" exports/replit_db.dump || {
+  echo "Binary restore failed, trying plain SQL ..."
+  psql "$NEON_URL_DIRECT" -f exports/replit_db.sql
+}
+echo "Neon import done."
+
+
+Switch the Replit app to Neon
+
+Set Replit Secrets so the app uses discrete DB_ vars* (the code prefers them when FORCE_DISCRETE_DB_CONFIG=true):
+
+export FORCE_DISCRETE_DB_CONFIG=true
+export DB_HOST="ep-noisy-pine-agnly9s.eu-central-1.aws.neon.tech"   # DIRECT host
+export DB_PORT=5432
+export DB_DATABASE="neondb"
+export DB_USERNAME="neondb_owner"
+export DB_PASSWORD="npg_gCx4XYj6QvtB"
+export DB_SSLMODE="require"
+# leave DB_OPTIONS empty on Replit – modern libpq usually doesn't need endpoint when DIRECT host is used
+
+
+Persist these in the project’s .env (if the project uses .env) and in Replit Secrets.
+
+Patch backend/config/database.php for Neon SNI + DB_OPTIONS
+
+Open backend/config/database.php and modify the DSN build to:
+
+read DB_OPTIONS if present and append it to DSN;
+
+auto-inject options=endpoint=<EPID>;channel_binding=disable if host ends in .neon.tech and DSN doesn’t already include options=endpoint=...;
+
+Minimal patch inside the constructor, inside the try{} block before new PDO():
+
+// NEW: extra DSN params and Neon endpoint injection
+$extra = $env('DB_OPTIONS', '');
+$dsn = "pgsql:host={$hostForDsn};port={$port};dbname={$dbname};sslmode={$sslmode}";
+if (!empty($extra)) $dsn .= ';' . $extra;
+
+$isNeon = (strpos($host, '.neon.tech') !== false || strpos($hostForDsn, '.neon.tech') !== false);
+if ($isNeon && stripos($dsn, 'options=endpoint=') === false) {
+    $firstLabel = strtok($host, '.');                          // e.g. ep-noisy-pine-agnly9s[-pooler]
+    $endpointId = preg_replace('/-pooler$/', '', $firstLabel); // strip -pooler if present
+    if (strpos($endpointId, 'ep-') === 0) {
+        $dsn .= ';options=endpoint=' . $endpointId . ';channel_binding=disable';
+        if (stripos($dsn, 'sslmode=') === false) $dsn .= ';sslmode=require';
+    }
+}
+
+$this->connection = new PDO($dsn, $user, $pass, [
+    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES   => false,
+    PDO::ATTR_TIMEOUT            => 15,
+]);
+
+
+Ensure the helper $env() at the top remains unchanged.
+
+Add a tiny connection self-test (dev only)
+
+Create backend/db_neon_check.php:
+
+<?php
+header('Content-Type: application/json; charset=utf-8');
+$host=getenv('DB_HOST'); $port=getenv('DB_PORT')?:'5432';
+$db=getenv('DB_DATABASE'); $user=getenv('DB_USERNAME');
+$pass=getenv('DB_PASSWORD'); $ssl=getenv('DB_SSLMODE')?:'require';
+$opt=getenv('DB_OPTIONS');
+$dsn="pgsql:host={$host};port={$port};dbname={$db};sslmode={$ssl}";
+if($opt)$dsn.=';'.$opt;
+try{
+  $pdo=new PDO($dsn,$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
+  echo json_encode(['ok'=>true,'dsn'=>$dsn],JSON_PRETTY_PRINT);
+}catch(PDOException $e){
+  echo json_encode(['ok'=>false,'error'=>$e->getMessage(),'dsn'=>$dsn],JSON_PRETTY_PRINT);
+}
+
+
+Run it locally (Replit webview) to confirm connection is OK.
+
+Run the app (Replit) & verify
+
+Start both servers (bash run.sh) or workflows.
+
+Check:
+
+Frontend dev: port 5000
+
+Backend dev: port 8080
+
+GET /api/ returns health/endpoints.
+
+backend/db_neon_check.php → ok:true
+
+SuperHosting production checklist (write README note and commit)
+
+Create/update backend/.env.example.production with:
+
+FORCE_DISCRETE_DB_CONFIG=true
+DB_HOST=ep-noisy-pine-agnly9s.eu-central-1.aws.neon.tech   # DIRECT host is preferred on shared hosting too
+DB_PORT=5432
+DB_DATABASE=neondb
+DB_USERNAME=neondb_owner
+DB_PASSWORD=***REPLACE***
+DB_SSLMODE=require
+# If SuperHosting shows "Endpoint ID is not specified..." then un-comment next line:
+# DB_OPTIONS=options=endpoint=ep-noisy-pine-agnly9s;channel_binding=disable
+
+
+Mention in README:
+
+In cPanel → Select PHP Version → Extensions enable pdo_pgsql and pgsql.
+
+If still seeing endpoint error, ensure pooler is OFF (use direct host) OR keep pooler but set DB_OPTIONS=options=endpoint=....
+
+Health endpoints: /backend/db_test.php, /api/.
+
+Commit changes
+
+Commit modified config/database.php, new backend/db_neon_check.php, updated docs, and keep exports/ in .gitignore if needed.
+
+Optional cleanups
+
+Remove any CREATE EXTENSION lines from SQL migrations if present (UUID is generated in PHP).
+
+Ensure CORS allows consultingg.com + Replit preview domains (already in your config).
+
+Deliverables:
+
+exports/replit_db.dump and exports/replit_db.sql created
+
+Neon import done
+
+Replit app running against Neon
+
+config/database.php patched
+
+backend/.env.example.production prepared
+
+Connection tests passing
+
+If any step fails, log the exact CLI error and continue with the fallback listed (DIRECT vs POOLER, add DB_OPTIONS, etc.). End by echoing a short summary with which DSN succeeded.

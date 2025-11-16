@@ -1,0 +1,322 @@
+Please update the project to be production-ready for SuperHosting.bg on consultingg.com, with Supabase as the only DB. Apply the following exact changes and confirm each step when done:
+
+0) Dependencies & dotenv
+
+Run: composer require vlucas/phpdotenv
+
+Ensure /backend/vendor/ will be committed/deployed (SuperHosting will not run composer).
+
+In /backend/api/index.php, require composer autoload and load dotenv at the very top:
+
+require_once __DIR__ . '/../vendor/autoload.php';
+Dotenv\Dotenv::createImmutable(__DIR__ . '/..')->load();
+header('Content-Type: application/json; charset=utf-8');
+
+1) Create/overwrite /backend/.env with these values
+
+(Do not commit this file; add .env to .gitignore if needed.)
+
+FORCE_DISCRETE_DB_CONFIG=true
+
+DB_HOST=db.gtvcakkgqlpfdivpejmi.supabase.co
+DB_PORT=5432
+DB_DATABASE=postgres
+DB_USERNAME=postgres
+DB_PASSWORD=PoloSport88*
+DB_SSLMODE=require
+
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://consultingg.com
+
+JWT_SECRET=consultingg-supabase-jwt-secret-key-2024
+JWT_AUD=consultingg.com
+
+SUPABASE_URL=https://gtvcakkgqlpfdivpejmi.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0dmNha2tncWxwZmRpdnBlam1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3MzI5MDAsImV4cCI6MjA3NDMwODkwMH0.YCRquF6NjAl0wAl5I3uNUyxKh0yKyHirjBKKRW3E4Fk
+
+2) Harden backend routing for properties (avoid 500 on invalid id/slug)
+
+Replace /backend/routes/properties.php with this:
+
+<?php
+require_once __DIR__ . '/../controllers/PropertyController.php';
+header('Content-Type: application/json; charset=utf-8');
+
+try {
+  $propertyController = new PropertyController();
+  $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+
+  $path = $_SERVER['CONSULTINGG_API_PATH'] ?? parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+  $path = preg_replace('#^/(backend/)?api/?#', '/', $path);
+  $pathParts = explode('/', trim($path, '/'));
+  if (isset($pathParts[0]) && $pathParts[0] === 'properties') array_shift($pathParts);
+
+  $jsonError = function (int $code, string $msg) {
+    http_response_code($code);
+    echo json_encode(['success' => false, 'error' => $msg], JSON_UNESCAPED_UNICODE);
+    exit;
+  };
+
+  switch ($method) {
+    case 'GET':
+      if (empty($pathParts[0])) {
+        $propertyController->getAll();
+      } elseif ($pathParts[0] === 'stats') {
+        $propertyController->getStats();
+      } else {
+        $idOrSlug = trim((string)$pathParts[0]);
+        if ($idOrSlug === '' || $idOrSlug === 'undefined' || $idOrSlug === 'null') {
+          $jsonError(400, 'Missing or invalid property identifier');
+        }
+        $propertyController->getById($idOrSlug);
+      }
+      break;
+
+    case 'POST':
+      if (empty($pathParts[0])) $propertyController->create();
+      else $jsonError(404, 'Endpoint not found');
+      break;
+
+    case 'PUT':
+      if (!empty($pathParts[0])) {
+        if (isset($pathParts[1]) && $pathParts[1] === 'images' && isset($pathParts[2])) {
+          require_once __DIR__ . '/../controllers/ImageController.php';
+          $imageController = new ImageController();
+          if (isset($pathParts[3]) && $pathParts[3] === 'main') $imageController->setMainFromUrl($pathParts[0], $pathParts[2]);
+          else $imageController->update($pathParts[2]);
+        } else {
+          $propertyController->update($pathParts[0]);
+        }
+      } else $jsonError(400, 'Property ID is required');
+      break;
+
+    case 'PATCH':
+      $contentType = $_SERVER['CONTENT_TYPE'] ?? ($_SERVER['HTTP_CONTENT_TYPE'] ?? '');
+      $isJson = is_string($contentType) && (stripos($contentType, 'application/json') === 0);
+      if (empty($pathParts[0])) {
+        if ($isJson) $propertyController->updateOrder();
+        else $jsonError(400, 'Invalid content type');
+      } else {
+        if (isset($pathParts[1]) && $pathParts[1] === 'images' && isset($pathParts[2]) && isset($pathParts[3]) && $pathParts[3] === 'main') {
+          require_once __DIR__ . '/../controllers/ImageController.php';
+          $imageController = new ImageController();
+          $imageController->setMainFromUrl($pathParts[0], $pathParts[2]);
+        } else $jsonError(400, 'Invalid PATCH endpoint');
+      }
+      break;
+
+    case 'DELETE':
+      if (!empty($pathParts[0]) && !isset($pathParts[1])) $propertyController->delete($pathParts[0]);
+      elseif (!empty($pathParts[0]) && isset($pathParts[1]) && $pathParts[1] === 'images' && isset($pathParts[2])) {
+        require_once __DIR__ . '/../controllers/ImageController.php';
+        $imageController = new ImageController();
+        $imageController->delete($pathParts[2]);
+      } else $jsonError(400, 'Property ID is required');
+      break;
+
+    default:
+      $jsonError(405, 'Method not allowed');
+  }
+} catch (Throwable $e) {
+  error_log('[PROPERTIES] Fatal error: ' . $e->getMessage());
+  http_response_code(500);
+  echo json_encode(['success' => false, 'error' => 'Server error']);
+}
+
+3) Controller & model safe lookups (id::text / property_code / slug)
+
+In /backend/controllers/PropertyController.php, replace the getById method with:
+
+public function getById(string $idOrSlug): void {
+  try {
+    $idOrSlug = trim($idOrSlug);
+    if ($idOrSlug === '' || $idOrSlug === 'undefined' || $idOrSlug === 'null') {
+      http_response_code(400);
+      echo json_encode(['success' => false, 'error' => 'Missing or invalid property identifier']);
+      return;
+    }
+    $property = $this->model->findOne($idOrSlug);
+    if (!$property) {
+      http_response_code(404);
+      echo json_encode(['success' => false, 'error' => 'Property not found']);
+      return;
+    }
+    http_response_code(200);
+    echo json_encode(['success' => true, 'data' => $property], JSON_UNESCAPED_UNICODE);
+  } catch (Throwable $e) {
+    error_log('[PropertyController@getById] ' . $e->getMessage());
+    http_response_code(500);
+    $debug = ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? 'false') === 'true';
+    echo json_encode(['success' => false, 'error' => 'Server error'] + ($debug ? ['detail' => $e->getMessage()] : []));
+  }
+}
+
+
+In /backend/models/Property.php, add or replace a method findOne like this (adapt to your actual column names; remove slug from SELECT/WHERE if you don’t have it):
+
+public function findOne(string $identifier): ?array {
+  $identifier = trim($identifier);
+  $where = " (p.id::text = :ident OR p.property_code = :ident OR p.slug = :ident) ";
+  $sql = "
+    SELECT
+      p.id, p.property_code, p.slug, p.title, p.description, p.price, p.currency,
+      p.transaction_type, p.property_type, p.city_region, p.district, p.address, p.area,
+      p.bedrooms, p.bathrooms, p.floors, p.floor_number, p.terraces, p.construction_type,
+      p.condition_type, p.heating, p.exposure, p.year_built, p.furnishing_level,
+      p.has_elevator, p.has_garage, p.has_southern_exposure, p.new_construction,
+      p.featured, p.active, p.created_at, p.updated_at,
+      COALESCE((
+        SELECT json_agg(
+          json_build_object(
+            'id', pi.id,
+            'property_id', pi.property_id,
+            'image_url', pi.image_url,
+            'image_path', pi.image_path,
+            'is_main', pi.is_main,
+            'sort_order', pi.sort_order,
+            'alt_text', pi.alt_text
+          )
+          ORDER BY pi.is_main DESC, pi.sort_order ASC
+        )
+        FROM property_images pi
+        WHERE pi.property_id = p.id
+      ), '[]') AS images
+    FROM properties p
+    WHERE {$where}
+    LIMIT 1
+  ";
+  $stmt = $this->conn->prepare($sql);
+  $stmt->bindValue(':ident', $identifier);
+  $stmt->execute();
+  $row = $stmt->fetch(PDO::FETCH_ASSOC);
+  return $row ?: null;
+}
+
+4) Backend .htaccess (safe for SuperHosting)
+
+Replace /backend/.htaccess with:
+
+RewriteEngine On
+RewriteBase /backend/
+
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+RewriteCond %{HTTP:Authorization} .+
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^api/(.*)$ - [R=204,L]
+
+RewriteRule ^api/.*$ api/index.php [QSA,L]
+
+<IfModule mod_headers.c>
+  Header always set Access-Control-Allow-Origin "https://consultingg.com"
+  Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+  Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+  Header always set Access-Control-Allow-Credentials "true"
+  Header always set Access-Control-Max-Age "3600"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set X-XSS-Protection "1; mode=block"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+<FilesMatch "\.(env|sql|dump|md|lock|log|bak|config|dist|sh)$">
+  Require all denied
+</FilesMatch>
+<FilesMatch "^(composer\.json|composer\.lock|package\.json|package-lock\.json|\.gitignore|\.htaccess)$">
+  Require all denied
+</FilesMatch>
+
+Options -Indexes +FollowSymLinks
+
+5) Root .htaccess (SPA + API + correct MIME)
+
+Replace root .htaccess with:
+
+RewriteEngine On
+
+# Serve real files/directories first
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# API to backend
+RewriteRule ^backend/api/?$ backend/api/index.php [L,QSA]
+RewriteRule ^backend/api/(.*)$ backend/api/index.php [L,QSA]
+RewriteRule ^api/?$ backend/api/index.php [L,QSA]
+RewriteRule ^api/(.*)$ backend/api/index.php [L,QSA]
+
+# SPA fallback
+RewriteRule . /index.html [L]
+
+# MIME
+AddType application/javascript .js .mjs
+AddType text/css .css
+AddType application/wasm .wasm
+AddType image/svg+xml .svg
+AddType image/webp .webp
+AddType font/woff2 .woff2
+AddType font/woff .woff
+AddType application/json .json
+
+# Security
+<FilesMatch "\.(env|git|htaccess|htpasswd)">
+  Require all denied
+</FilesMatch>
+<Files "composer.*">
+  Require all denied
+</Files>
+<Files "package*.json">
+  Require all denied
+</Files>
+
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+  </FilesMatch>
+  <FilesMatch "\.(js|mjs|css|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot)$">
+    Header set Cache-Control "public, max-age=2592000"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+6) Frontend API base
+
+Ensure the frontend uses a configurable base, e.g. VITE_API_BASE.
+
+For production build set: VITE_API_BASE=/api (or /backend/api).
+
+Rebuild: npm run build. The dist/ output will be deployed to domain root.
+
+7) Health & DB tests (keep for diagnostics)
+
+Add/update:
+
+/backend/api/health route to return JSON with DB SELECT NOW().
+
+/backend/db_test.php (we already have a robust version) to verify PDO to Supabase.
+
+8) Deliverables / what to ship
+
+Frontend: upload contents of dist/ to domain root.
+
+Backend: upload entire /backend including vendor/ and .htaccess.
+
+Upload /backend/.env manually on SuperHosting (do not commit).
+
+9) Quick verification (please run and paste outputs)
+
+GET /backend/api/health → 200 JSON
+
+GET /backend/api/properties?limit=3 → 200 JSON
+
+GET /backend/api/properties/prop-001 → 200 JSON or 404 (not 500)
+
+Frontend page loads, property images are visible, and property detail links work (no /properties/undefined).
+
+If any column names differ in the DB (e.g., no slug), adjust the SELECT/WHERE in Property::findOne accordingly and confirm.

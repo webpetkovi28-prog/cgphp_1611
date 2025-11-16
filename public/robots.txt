@@ -1,0 +1,34 @@
+# ConsultingG Real Estate - Robots.txt
+# https://consultingg.com/robots.txt
+
+User-agent: *
+Allow: /
+Allow: /properties
+Allow: /properties/*
+Allow: /about
+Allow: /contact
+Allow: /images/
+Allow: /logo.png
+
+# Disallow admin areas
+Disallow: /admin/
+Disallow: /backend/
+Disallow: /api/
+
+# Disallow sensitive files
+Disallow: /.env
+Disallow: /composer.json
+Disallow: /composer.lock
+Disallow: /*.sql
+Disallow: /*.md
+
+# Allow search engines to crawl images
+User-agent: Googlebot-Image
+Allow: /images/
+Allow: /logo.png
+
+# Sitemap location
+Sitemap: https://consultingg.com/sitemap.xml
+
+# Crawl delay for respectful crawling
+Crawl-delay: 1

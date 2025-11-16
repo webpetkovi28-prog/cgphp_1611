@@ -1,0 +1,37 @@
+# ConsultingG Real Estate - Replit Development Configuration
+
+# Image/Asset Configuration  
+# For Replit (absolute URLs using Replit domain)
+PUBLIC_BASE_URL=https://7c3c5743-01a6-4398-8777-d92b4923d3d0-00-r2d8jm4i2fq9.janeway.replit.dev
+ALLOW_REMOTE_UPLOADS_FALLBACK=true
+
+# Application Configuration  
+APP_DEBUG=true
+APP_ENV=development
+
+# Demo/Testing flags (enabled for development)
+DEMO_MODE=true
+WEBCONTAINER_ENV=true
+
+# JWT Secret (change in production)
+JWT_SECRET=replit-dev-secret-consultingg-2024
+
+# Upload Configuration
+UPLOAD_MAX_SIZE=10485760
+ALLOWED_IMAGE_TYPES=image/jpeg,image/jpg,image/png,image/webp,image/gif
+
+# Supabase Database Configuration
+# NOTE: Replit cannot connect to external Supabase database due to network restrictions
+# For development, we use Replit's local PostgreSQL (DATABASE_URL)
+# For production on SuperHosting, use DB_HOST environment variable
+# FORCE_DISCRETE_DB_CONFIG=true
+# DB_HOST=db.gtvcakkgqlpfdivpejmi.supabase.co
+# DB_PORT=5432
+# DB_NAME=postgres
+# DB_USER=postgres
+# DB_PASSWORD=<from-secret>
+# DB_SSLMODE=require
+
+# Supabase Frontend Configuration (for Supabase client SDK)
+VITE_SUPABASE_URL=https://gtvcakkgqlpfdivpejmi.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0dmNha2tncWxwZmRpdnBlam1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3MzI5MDAsImV4cCI6MjA3NDMwODkwMH0.YCRquF6NjAl0wAl5I3uNUyxKh0yKyHirjBKKRW3E4Fk

@@ -1,0 +1,45 @@
+Act as a senior full-stack engineer. Fully diagnose and fix the following, aligning frontend, API, and DB with best practices.
+
+A) “Year Built” (year_built)
+
+Treat as optional end-to-end: empty in the admin form must persist as NULL and must not render on the frontend.
+
+Remove the broken validation rule (“non-negative number < 1000”). Implement a correct server-side validator: integer year within a realistic range (e.g., 1800…currentYear), or NULL if omitted.
+
+Ensure DB column allows NULL and has no default (do not default to 2023 or currentYear).
+
+Admin form: no prefilled/default year; do not submit the field when empty.
+
+API responses: return year_built: null (or omit) when not set; the frontend must conditionally hide the year (no fallbacks like 2023).
+
+Verify: set year to 2024 → shows 2024; clear the field → DB NULL, frontend shows nothing; invalid values (e.g., 999 or > currentYear) → clean 4xx JSON with field error.
+
+B) “Featured” flag (star icon + form)
+
+Ensure a single canonical boolean field (e.g., properties.featured default false, indexed).
+
+API: support updating featured via the standard update endpoint or a dedicated PATCH /properties/:id/featured (admin-only, JWT required). Return the updated record/state.
+
+Admin list/detail UI: the star icon toggles featured with optimistic UI and rollback on failure; the edit form saves featured reliably.
+
+Fix any mapping mismatch (e.g., isFeatured vs featured) so the flag persists to DB and reflects immediately in lists/cards.
+
+C) Verification (must pass)
+
+Create property with year_built=2024 → GET returns 2024; cards/detail show 2024.
+
+Edit the same property: clear year_built → DB NULL; frontend hides the year everywhere.
+
+Enter invalid year (e.g., 999 / next year+1) → 4xx with clear JSON field error; no silent defaults.
+
+Toggle “featured” via star in list and via form → DB updates to true/false, list UI updates, and value persists after reload.
+
+All responses strict JSON with proper status codes; no HTML leakage; mutations require admin JWT.
+
+Deliverables
+
+Minimal idempotent migration (only if year_built needs NULL or defaults removed).
+
+Updated validation and field mapping; secured toggle endpoint.
+
+A short report: root cause(s), exact fixes, endpoints touched, and screenshots/logs of the successful tests.

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  
+  <!-- Homepage -->
+  <url>
+    <loc>https://consultingg.com/</loc>
+    <lastmod>2024-01-01T10:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  
+  <!-- Properties Page -->
+  <url>
+    <loc>https://consultingg.com/properties</loc>
+    <lastmod>2024-01-01T10:00:00+00:00</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- About Page -->
+  <url>
+    <loc>https://consultingg.com/about</loc>
+    <lastmod>2024-01-01T10:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Contact Page -->
+  <url>
+    <loc>https://consultingg.com/contact</loc>
+    <lastmod>2024-01-01T10:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Individual Properties -->
+  <url>
+    <loc>https://consultingg.com/properties/prop-001</loc>
+    <lastmod>2024-01-01T10:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://consultingg.com/images/1_kachta_simeonovo.jpg</image:loc>
+      <image:title>Луксозен апартамент в Симеоново</image:title>
+    </image:image>
+  </url>
+  
+  <url>
+    <loc>https://consultingg.com/properties/prop-002</loc>
+    <lastmod>2024-01-01T10:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://consultingg.com/images/1_kachta_dragalevci.jpg</image:loc>
+      <image:title>Къща в Драгалевци</image:title>
+    </image:image>
+  </url>
+  
+  <url>
+    <loc>https://consultingg.com/properties/prop-003</loc>
+    <lastmod>2024-01-01T10:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://consultingg.com/images/1_ap_oborichte.jpg</image:loc>
+      <image:title>Офис в центъра</image:title>
+    </image:image>
+  </url>
+  
+  <url>
+    <loc>https://consultingg.com/properties/prop-004</loc>
+    <lastmod>2024-01-01T10:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://consultingg.com/images/2_kachta_dragalevci.jpg</image:loc>
+      <image:title>Мезонет в Бояна</image:title>
+    </image:image>
+  </url>
+  
+  <url>
+    <loc>https://consultingg.com/properties/prop-005</loc>
+    <lastmod>2024-01-01T10:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://consultingg.com/images/1_ap_oborichte.jpg</image:loc>
+      <image:title>Апартамент под наем в Оборище</image:title>
+    </image:image>
+  </url>
+  
+</urlset>
