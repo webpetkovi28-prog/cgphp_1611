@@ -367,6 +367,12 @@ export const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
               type="text"
               value={formData.keyword || ''}
               onChange={(e) => updateFormData({ keyword: e.target.value })}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSearch();
+                }
+              }}
               className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
               placeholder="Търсене в заглавие, описание, квартал..."
               autoComplete="off"
