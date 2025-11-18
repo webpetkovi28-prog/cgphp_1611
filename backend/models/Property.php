@@ -432,8 +432,11 @@ class Property {
         }
 
         if (!empty($filters['city_region'])) {
-            $where[] = 'p.city_region = :city_region';
-            $params[':city_region'] = $filters['city_region'];
+            $city = trim($filters['city_region']);
+            if ($city !== '') {
+                $where[] = 'p.city_region LIKE :city_region';
+                $params[':city_region'] = '%' . $city . '%';
+            }
         }
 
         if (!empty($filters['property_type'])) {
@@ -442,8 +445,11 @@ class Property {
         }
 
         if (!empty($filters['district'])) {
-            $where[] = 'p.district = :district';
-            $params[':district'] = $filters['district'];
+            $district = trim($filters['district']);
+            if ($district !== '') {
+                $where[] = 'p.district LIKE :district';
+                $params[':district'] = '%' . $district . '%';
+            }
         }
 
         if (!empty($filters['price_min'])) {
@@ -472,6 +478,24 @@ class Property {
 
         $whereSql = implode(' AND ', $where);
         $offset = max(0, ($page - 1) * $limit);
+
+        // Debug logging for search filters (only when APP_DEBUG=true)
+        try {
+            $debug = ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? 'false') === 'true';
+            if ($debug) {
+                $debugPayload = [
+                    'filters'  => $filters,
+                    'whereSql' => $whereSql,
+                    'params'   => $params,
+                    'page'     => $page,
+                    'limit'    => $limit,
+                ];
+                error_log('[Property@getAllPaginated] DEBUG: ' . json_encode($debugPayload, JSON_UNESCAPED_UNICODE));
+            }
+        } catch (Throwable $e) {
+            // If logging fails for any reason, don't break the API
+            error_log('[Property@getAllPaginated] Failed to log debug info: ' . $e->getMessage());
+        }
 
         $sqlCount = "SELECT COUNT(*) AS c FROM " . $this->table_name . " p WHERE $whereSql";
         $stmt = $this->conn->prepare($sqlCount);

@@ -31,8 +31,8 @@ export const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
       searchParams.transaction_type = formData.transactionType;
     }
     
-    if (formData.keyword) {
-      searchParams.keyword = formData.keyword;
+    if (formData.keyword && formData.keyword.trim()) {
+      searchParams.keyword = formData.keyword.trim();
     }
     
     // Use settlement (city) as primary location, fallback to region
@@ -365,10 +365,18 @@ export const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
             <label className="text-sm font-medium text-gray-700 mb-2 block">Търсене по ключова дума</label>
             <input
               type="text"
-              value={formData.keyword}
+              value={formData.keyword || ''}
               onChange={(e) => updateFormData({ keyword: e.target.value })}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSearch();
+                }
+              }}
               className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
               placeholder="Търсене в заглавие, описание, квартал..."
+              autoComplete="off"
+              name="keyword"
             />
           </div>
           
